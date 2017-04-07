@@ -6,13 +6,13 @@ np.random.seed(1234)
 
 class Fonts():
 	"""
-	Purposes:
-		- Accessing the image data stored in hdf5 format
-		- Serving "real" data to the Wasserstein GAN model
+	- Accessing the image data stored in hdf5 format
+	- Serving "real" data to the Wasserstein GAN model
 	"""
 
-	def __init__(self, path):
+	def __init__(self, path, batch_size):
 		self.load_font_file(path)
+		self.batch_size = batch_size
 
 	def load_font_file(self, path):
 		"""
@@ -21,14 +21,15 @@ class Fonts():
 		"""
 		f = h5py.File(path, 'r')
 		self.fonts = f['fonts']
+		fonts_shape = f['fonts'].shape
+		self.num_fonts, self.num_chars = fonts_shape[0], fonts_shape[1]
 
-	def serve_data(self, batch_size):
+	def serve_real(self):
 		"""
-		- Serve batch_size amount of real font data to the critic
-		- Serve batch_size amount of labels associated with the font data
-		- Shape is []
+		- Serve self.batch_size amount of real font data to the critic
+		- Serve self.batch_size amount of labels associated with the font data
 		"""
-		pass
+		labels = np.random.randint(low=0, high=num_classes)
 
 	def test_load(self):
 		plt.imshow(self.fonts[0][0])
@@ -40,16 +41,22 @@ class Latent():
 	- Shape is [batch_size, num_classes+latent_dim]
 	"""
 
-	def serve_latent(num_classes, latent_dim, batch_size):
+	def __init__(self, num_classes, latent_dim, batch_size):
+		self.num_classes = num_classes
+		self.latent_dim = latent_dim
+		self.batch_size = batch_size
+
+	def serve_latent():
 		"""
 		- Serve batch_size amount of latent variables to the generator
+		- Don't need to have fake as an item in one_hot vector
 		"""
 		row_picker = np.arange(batch_size)
-		class_picker = np.random.randint(low=0, high=num_classes, size=batch_size)
-		one_hot = np.zeros((batch_size, num_classes))
+		class_picker = np.random.randint(low=0, high=self.num_classes, size=self.batch_size)
+		one_hot = np.zeros((self.batch_size, self.num_classes))
 		one_hot[row_picker, class_picker] = 1
 
-		latent = np.random.uniform(size=(batch_size, latent_dim))
+		latent = np.random.uniform(size=(self.batch_size, self.latent_dim))
 		feed_vectors = np.concatenate((one_hot, latent), axis=1)
 		return feed_vectors
 
