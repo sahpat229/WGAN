@@ -45,6 +45,7 @@ class Latent():
 		self.num_classes = num_classes
 		self.latent_dim = latent_dim
 		self.batch_size = batch_size
+		self.output_size = self.num_classes + self.latent_dim
 
 	def serve_latent():
 		"""
@@ -58,7 +59,9 @@ class Latent():
 
 		latent = np.random.uniform(size=(self.batch_size, self.latent_dim))
 		feed_vectors = np.concatenate((one_hot, latent), axis=1)
-		return feed_vectors
+
+		labels = np.concatenate((one_hot, np.zeros((self.batch_size, 1))), axis=1)
+		return feed_vectors, labels
 
 font = Fonts('../fonts.hdf5')
 font.test_load()
