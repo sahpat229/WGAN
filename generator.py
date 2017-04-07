@@ -13,6 +13,8 @@ class Generator():
 		"""
 		- Compute G(z) as given in the Wasserstein paper
 		- z is of shape [batch_size, num_classes + latent_dim]
+
+		TODO: change to nearest neighbor upsampling instead of deconvolution
 		"""
 
 		result = fully_connected(z, 4*4*1024)
