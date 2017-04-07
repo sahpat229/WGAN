@@ -14,6 +14,7 @@ class WGAN():
 		"""
 		- sess : tf.Session
 		- path: path to fonts file
+
 		"""
 		self.sess = sess
 		self.real_data = Fonts(path, batch_size)
