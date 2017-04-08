@@ -1,5 +1,6 @@
 import tensorflow as tf
 import ops
+import numpy as np
 
 slim = tf.contrib.slim
 
@@ -25,9 +26,9 @@ class Discriminator():
 		- x is of shape [batch_size, im_width, im_height, im_channels]
 		- returns D(x) of shape [batch_size, num_chars+1] (all fonts + fake)
 		"""
-		result = Discriminator.dis_conv(x, 128, 5, 2, ops.lrelu)
-		result = Discriminator.dis_conv(result, 256, 5, 2, ops.lrelu)
-		result = Discriminator.dis_conv(result, 512, 5, 2, ops.lrelu)
-		result = Discriminator.dis_conv(result, 1024, 5, 1, ops.lrelu)
+		result = Discriminator.dis_conv(x, 128, 2, 2, ops.lrelu)
+		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu)
+		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu)
+		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu)
 		result = slim.fully_connected(result, num_chars+1, activation_fn=ops.lrelu)
 		return result

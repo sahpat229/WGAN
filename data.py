@@ -62,6 +62,3 @@ class Latent():
 
 		labels = np.concatenate((one_hot, np.zeros((self.batch_size, 1))), axis=1)
 		return feed_vectors, labels
-
-font = Fonts('../fonts.hdf5')
-font.test_load()

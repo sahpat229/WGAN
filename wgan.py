@@ -12,7 +12,8 @@ class WGAN():
 	Improved Wasserstein GAN Model
 	"""
 
-	def __init__(self, sess, path, latent_dim, num_classes, batch_size, learning_rate):
+	def __init__(self, sess, path, latent_dim, num_classes, batch_size, learning_rate_c,
+		learning_rate_g, lambdah):
 		"""
 		- sess : tf.Session
 		- path: path to fonts file
@@ -27,10 +28,13 @@ class WGAN():
 		self.latent = Latent(self.real_data.num_chars, latent_dim, batch_size)
 		self.num_classes = num_classes
 		self.batch_size = batch_size
-		self.learning_rate = learning_rate
+		self.learning_rate_c = learning_rate_c
+		self.learning_rate_g = learning_rate_g
+		self.lambdah = lambdah
+		self.build_model()
 
 	def serve_epsilon(self):
-		return np.random.uniform(size=self.batch_size)
+		epsilon = np.random.uniform(size=self.batch_size)
 
 	def build_model(self):
 		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 3])
@@ -41,12 +45,16 @@ class WGAN():
 		self.is_training = tf.placeholder(tf.bool, shape=[])
 
 		disc_output_x = Discriminator.discriminator(self.x, self.num_classes)
+		print("disc_output_x size: ", disc_output_x.get_shape())
 		generator_output = Generator.generator(self.z, self.is_training)
+		print("generator_output size: ", generator_output.get_shape())
 		disc_output_gz = Discriminator.discriminator(generator_output, self.num_classes)
+		print("disc_output_gz: ", disc_output_gz.get_shape())
 
-		x_hat = tf.multiply(self.epsilon, self.x) + 
+		x_hat = tf.multiply(self.epsilon, self.x) + \
 			tf.multiply(1-self.epsilon, self.generator_output)
 
+		disc_interpolates = Discriminator.discriminator(x_hat, self.num_classes)
 
 		# discriminator(generator_output_inner) will be of size:
 		# 	[batch_size, num_classes+1]
@@ -55,12 +63,27 @@ class WGAN():
 
 		self.generator_loss = tf.reduce_sum(tf.multiply(disc_output_gz, self.labels), axis=1) + \
 			tf.reduce_sum(tf.multiply(disc_output_gz, self.labels-1), axis=1)
+		batch_gen_loss = self.generator_loss
 		self.generator_loss = tf.reduce_sum(self.generator_loss)
 
 
-		critic_generator_loss = tf.reduce_sum(tf.multiply(disc_output_x, self.labels), axis=1) + \
-			tf.reduce_sum(tf.multiply(disc_output_x, self.labels-1), axis=1)
+		self.disc_loss = tf.reduce_sum(tf.multiply(disc_output_x, self.labels), axis=1) + \
+			tf.reduce_sum(tf.multiply(disc_output_x, self.labels-1), axis=1) - batch_gen_loss
 
+		gradients = tf.gradients(disc_interpolates, [interpolates])[0]
+		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+		gradient_penalty = tf.reduce_mean((slopes-1)**2)
 
-		self.critic_loss = Discriminator.discriminator(generator_output_inner) - \
-			discriminator_output
+		self.disc_loss += self.lambdah*gradient_penalty
+
+sess = tf.Session()
+path = '../fonts.hdf5'
+latent_dim = 100
+num_classes = 62
+batch_size =16
+learning_rate_c = 1e-4
+learning_rate_g = 1e-4
+lambdah = 10
+
+wgan = WGAN(sess, path, latent_dim, num_classes, batch_size, 
+	learning_rate_c, learning_rate_g, lambdah)

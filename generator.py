@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import numpy as np
 
 slim =  tf.contrib.slim
 
@@ -19,7 +20,7 @@ class Generator():
 
 		result = tf.image.resize_images(result,
 				[new_size, new_size],
-				method=ResizeMethod.NEAREST_NEIGHBOR
+				method=tf.image.ResizeMethod.NEAREST_NEIGHBOR
 			)
 
 		result = tf.layers.conv2d(
