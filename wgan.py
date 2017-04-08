@@ -7,6 +7,9 @@ from generator import Generator
 
 np.random.seed(1234)
 
+## TODO: FIX GRADIENTS
+
+
 class WGAN():
 	"""
 	Improved Wasserstein GAN Model
