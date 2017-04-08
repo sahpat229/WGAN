@@ -43,8 +43,8 @@ class Generator():
 		"""
 		result = slim.fully_connected(z, 4*4*1024)
 		result = tf.reshape(result, [-1, 4, 4, 1024])
-		result = Generator.gen_conv(result, 8, 512, 5, 2, tf.nn.relu, is_training)
-		result = Generator.gen_conv(result, 16, 256, 5, 2, tf.nn.relu, is_training)
-		result = Generator.gen_conv(result, 32, 128, 5, 2, tf.nn.relu, is_training)
-		result = Generator.gen_conv(result, 64, 3, 5, 2, tf.nn.tanh, is_training)
+		result = Generator.gen_conv(result, 8, 512, 5, 1, tf.nn.relu, is_training)
+		result = Generator.gen_conv(result, 16, 256, 5, 1, tf.nn.relu, is_training)
+		result = Generator.gen_conv(result, 32, 128, 5, 1, tf.nn.relu, is_training)
+		result = Generator.gen_conv(result, 64, 3, 5, 1, tf.nn.tanh, is_training)
 		return result

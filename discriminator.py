@@ -20,7 +20,7 @@ class Discriminator():
 			)
 		return result
 
-	def discriminator(x, num_chars):
+	def discriminator(x, batch_size, num_chars):
 		"""
 		- Compute D(x) or D(x_hat) as given in the Wasserstein paper
 		- x is of shape [batch_size, im_width, im_height, im_channels]
@@ -30,5 +30,6 @@ class Discriminator():
 		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu)
 		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu)
 		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu)
+		result = tf.reshape(result, [batch_size, -1])
 		result = slim.fully_connected(result, num_chars+1, activation_fn=ops.lrelu)
 		return result
