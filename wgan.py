@@ -4,6 +4,7 @@ import tensorflow as tf
 from data import Fonts, Latent
 from discriminator import Discriminator
 from generator import Generator
+from time import gmtime, strftime
 
 np.random.seed(1234)
 
@@ -16,7 +17,7 @@ class WGAN():
 	"""
 
 	def __init__(self, sess, path, latent_dim, num_classes, batch_size, learning_rate_c,
-		learning_rate_g, lambdah):
+		learning_rate_g, lambdah, num_critic, iterations):
 		"""
 		- sess : tf.Session
 		- path: path to fonts file
@@ -34,6 +35,9 @@ class WGAN():
 		self.learning_rate_c = learning_rate_c
 		self.learning_rate_g = learning_rate_g
 		self.lambdah = lambdah
+		self.num_critic = num_critic
+		self.iterations = iterations
+		self.time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
 		self.build_model()
 
 	def serve_epsilon(self):
@@ -45,9 +49,10 @@ class WGAN():
 
 	def build_model(self):
 		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 3])
-		self.labels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
+		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.latent.output_size])
+		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 3])
 		self.is_training = tf.placeholder(tf.bool, shape=[])
 
@@ -75,13 +80,13 @@ class WGAN():
 		# labels will be of shape:
 		#	[batch_size, num_classes+1]
 
-		self.generator_loss = tf.reduce_sum(tf.multiply(disc_output_gz, self.labels), axis=1) + \
-			tf.reduce_sum(tf.multiply(disc_output_gz, self.labels-1), axis=1)
+		self.generator_loss = tf.reduce_sum(tf.multiply(disc_output_gz, self.zlabels), axis=1) + \
+			tf.reduce_sum(tf.multiply(disc_output_gz, self.zlabels-1), axis=1)
 		batch_gen_loss = self.generator_loss
 		self.generator_loss = tf.reduce_mean(self.generator_loss)
 
-		self.disc_loss = tf.reduce_sum(tf.multiply(disc_output_x, self.labels), axis=1) + \
-			tf.reduce_sum(tf.multiply(disc_output_x, self.labels-1), axis=1) - batch_gen_loss
+		self.disc_loss = tf.reduce_sum(tf.multiply(disc_output_x, self.xlabels), axis=1) + \
+			tf.reduce_sum(tf.multiply(disc_output_x, self.xlabels-1), axis=1) - batch_gen_loss
 		self.disc_loss = tf.reduce_mean(self.disc_loss)
 
 		gradients_per_dim = [tf.gradients(tf.slice(disc_interpolates, [0, i], [self.batch_size, 1]), [interpolates])
@@ -95,7 +100,12 @@ class WGAN():
 		for grad_penalty in gradient_penalty_per_dim:
 			total_grad_penalty += grad_penalty
 		self.disc_loss += self.lambdah*total_grad_penalty
-		print(self.disc_loss.get_shape())
+
+		disc_loss_sum = tf.summary.scalar('Discriminator Loss', self.disc_loss)
+		gen_loss_sum = tf.summary.scalar('Generator Loss', self.gen_loss)
+
+		self.disc_writer = tf.summary.FileWriter('./logs/' + self.time, self.sess.graph)
+		self.gen_writer = tf.summary.FileWriter('/logs/' + self.time, self.sess.graph)
 
 	def optim_init(self):
 		update_ops = tf.get_collection("gen_upd_coll")
@@ -105,27 +115,70 @@ class WGAN():
 				learning_rate=self.learning_rate,
 				beta1=0.5,
 				beta2=0.9
-				)
-				.minimize(self.generator_loss)
+				).minimize(self.generator_loss)
 			)
 
 		self.disc_optim = tf.train.AdamOptimizer(
 			learning_rate=self.learning_rate,
 			beta1=0.5,
 			beta2=0.9
-			)
-			.minimize(self.disc_loss)
+			).minimize(self.disc_loss)
 	
-	def train_iter(self, iteration)
+		self.sess.run(tf.global_variables_initializer())
+
+	def disc_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
+		disc_loss, _, summary = self.sess.run(
+			[self.disc_loss, self.disc_optim, disc_loss_sum],
+			feed_dict = {
+					self.x: x,
+					self.xlabels: xlabels,
+					self.z: z,
+					self.zlabels: zlabels,
+					self.epsilon: epsilon,
+					self.is_training: True
+				}
+			)
+		self.disc_writer.add_summary(summary, iteration)
+
+	def gen_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
+		gen_loss, _, summary = self.sess.run(
+			[self.gen_loss, self.gen_optim, gen_loss_sum],
+			feed_dict = {
+					self.x: x,
+					self.xlabels: xlabels,
+					self.z: z,
+					self.zlabels: zlabels,
+					self.epsilon: epsilon,
+					self.is_training: True
+				}
+			)
+		self.gen_writer.add_summary(summary, iteration)
+
+	def train(self):
+		for iteration in range(self.iterations):
+			for disc_iter in range(self.num_critic):
+				x, xlabels = self.real_data.serve_real()
+				z, zlabels = self.latent.serve_latent()
+				epsilon = self.serve_epsilon()
+				self.disc_train_iter(iteration*self.num_critic + disc_iter,
+					x, xlabels, z, zlabels, epsilon)
+			x, xlabels = self.real_data.serve_real()
+			z, zlabels = self.latent.serve_latent()
+			epsilon = self.serve_epsilon()
+			self.gen_train_iter(iteration*self.num_critic + disc_iter,
+				x, xlabels, z, zlabels, epsilon)
+
 
 sess = tf.Session()
-path = '/media/sahil/NewVolume/College/fonts.hdf5'
+path = '../fonts.hdf5'
 latent_dim = 100
 num_classes = 62
 batch_size =16
 learning_rate_c = 1e-4
 learning_rate_g = 1e-4
 lambdah = 10
+num_critic = 5
+iterations = 10000
 
 wgan = WGAN(sess, path, latent_dim, num_classes, batch_size, 
-	learning_rate_c, learning_rate_g, lambdah)
+	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)

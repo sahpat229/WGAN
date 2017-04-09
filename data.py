@@ -29,7 +29,12 @@ class Fonts():
 		- Serve self.batch_size amount of real font data to the critic
 		- Serve self.batch_size amount of labels associated with the font data
 		"""
-		labels = np.random.randint(low=0, high=num_classes)
+		labels = np.random.randint(low=0, high=self.num_chars, size=self.batch_size)
+		batch_labels = np.zeros((self.batch_size, self.num_chars+1))
+		batch_labels[np.arange(self.batch_size), labels] = 1
+		fonts = np.random.randint(low=0, high=self.num_fonts, size=self.batch_size)
+		images = np.array([self.fonts[fonts[i]][labels[i]]] for i in range(self.batch_size))
+		return images, batch_labels
 
 	def test_load(self):
 		plt.imshow(self.fonts[0][0])
