@@ -20,17 +20,15 @@ class Discriminator():
 
 			)
 
-
-
-		result = tf.layers.conv2d(
-				input_map,
-				filters,
-				kernel_size=[k_size, k_size],
-				strides=(stride, stride),
-				padding='valid',
-				activation=activation,
-				kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
-			)
+		# result = tf.layers.conv2d(
+		# 		input_map,
+		# 		filters,
+		# 		kernel_size=[k_size, k_size],
+		# 		strides=(stride, stride),
+		# 		padding='valid',
+		# 		activation=activation,
+		# 		kernel_initializer=tf.contrib.layers.variance_scaling_initializer()
+		# 	)
 		return result
 
 	def discriminator(x, batch_size, num_chars, var_coll):
