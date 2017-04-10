@@ -25,7 +25,11 @@ class WGAN():
 		- num_classes: number of different classes the discriminator should
 			output over.  Does not include the +1 for fake
 		- batch_size: batch size
-		- learning_rate: learning rate of both discriminator and generator
+		- learning_rate_c: learning rate of both discriminator
+		- learning_rate_g: learning_rate of the generator
+		- lambdah: gradient penalty scaler
+		- num_critic: number of iterations critic should run over generator
+		- iterations: number of overall iterations
 		"""
 		self.sess = sess
 		self.real_data = Fonts(path, batch_size)
@@ -41,6 +45,9 @@ class WGAN():
 		self.build_model()
 
 	def serve_epsilon(self):
+		"""
+		Serve the random number from 0 to 1 for each dimension to make x_hat
+		"""
 		epsilon = np.random.uniform(size=self.batch_size)
 		epsilon_return = np.zeros((self.batch_size, 64, 64, 1))
 		for index in range(self.batch_size):
