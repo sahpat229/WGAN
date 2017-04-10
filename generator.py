@@ -67,5 +67,5 @@ class Generator():
 		result = Generator.gen_conv(result, 8, 512, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
 		result = Generator.gen_conv(result, 16, 256, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
 		result = Generator.gen_conv(result, 32, 128, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
-		result = Generator.gen_conv(result, 64, 3, 5, 1, tf.nn.tanh, is_training, var_coll, upd_coll)
+		result = Generator.gen_conv(result, 64, 1, 5, 1, tf.nn.tanh, is_training, var_coll, upd_coll)
 		return result

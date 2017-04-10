@@ -42,18 +42,18 @@ class WGAN():
 
 	def serve_epsilon(self):
 		epsilon = np.random.uniform(size=self.batch_size)
-		epsilon_return = np.zeros((self.batch_size, 64, 64, 3))
+		epsilon_return = np.zeros((self.batch_size, 64, 64, 1))
 		for index in range(self.batch_size):
 			epsilon_return[index, :] = epsilon[index]
 		return epsilon_return
 
 	def build_model(self):
-		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 3])
+		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.latent.output_size])
 		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
-		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 3])
+		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.is_training = tf.placeholder(tf.bool, shape=[])
 
 		gen_var_coll = ["gen_var_coll"]
@@ -101,25 +101,25 @@ class WGAN():
 			total_grad_penalty += grad_penalty
 		self.disc_loss += self.lambdah*total_grad_penalty
 
-		disc_loss_sum = tf.summary.scalar('Discriminator Loss', self.disc_loss)
-		gen_loss_sum = tf.summary.scalar('Generator Loss', self.gen_loss)
+		self.disc_loss_sum = tf.summary.scalar('Discriminator Loss', self.disc_loss)
+		self.gen_loss_sum = tf.summary.scalar('Generator Loss', self.generator_loss)
 
 		self.disc_writer = tf.summary.FileWriter('./logs/' + self.time, self.sess.graph)
-		self.gen_writer = tf.summary.FileWriter('/logs/' + self.time, self.sess.graph)
+		self.gen_writer = tf.summary.FileWriter('./logs/' + self.time, self.sess.graph)
 
 	def optim_init(self):
 		update_ops = tf.get_collection("gen_upd_coll")
 		updates = tf.group(*update_ops)
 		self.gen_optim = tf.group(updates,
 			tf.train.AdamOptimizer(
-				learning_rate=self.learning_rate,
+				learning_rate=self.learning_rate_g,
 				beta1=0.5,
 				beta2=0.9
 				).minimize(self.generator_loss)
 			)
 
 		self.disc_optim = tf.train.AdamOptimizer(
-			learning_rate=self.learning_rate,
+			learning_rate=self.learning_rate_c,
 			beta1=0.5,
 			beta2=0.9
 			).minimize(self.disc_loss)
@@ -128,7 +128,7 @@ class WGAN():
 
 	def disc_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		disc_loss, _, summary = self.sess.run(
-			[self.disc_loss, self.disc_optim, disc_loss_sum],
+			[self.disc_loss, self.disc_optim, self.disc_loss_sum],
 			feed_dict = {
 					self.x: x,
 					self.xlabels: xlabels,
@@ -138,11 +138,12 @@ class WGAN():
 					self.is_training: True
 				}
 			)
+		print("DISC LOSS: ", disc_loss)
 		self.disc_writer.add_summary(summary, iteration)
 
 	def gen_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		gen_loss, _, summary = self.sess.run(
-			[self.gen_loss, self.gen_optim, gen_loss_sum],
+			[self.gen_loss, self.gen_optim, self.gen_loss_sum],
 			feed_dict = {
 					self.x: x,
 					self.xlabels: xlabels,
@@ -152,6 +153,7 @@ class WGAN():
 					self.is_training: True
 				}
 			)
+		print("GEN LOSS: ", gen_loss)
 		self.gen_writer.add_summary(summary, iteration)
 
 	def train(self):
@@ -170,7 +172,7 @@ class WGAN():
 
 
 sess = tf.Session()
-path = '../fonts.hdf5'
+path = '/media/sahil/NewVolume/College/fonts.hdf5'
 latent_dim = 100
 num_classes = 62
 batch_size =16
@@ -178,7 +180,9 @@ learning_rate_c = 1e-4
 learning_rate_g = 1e-4
 lambdah = 10
 num_critic = 5
-iterations = 10000
+iterations = 10
 
 wgan = WGAN(sess, path, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
+wgan.optim_init()
+wgan.train()
