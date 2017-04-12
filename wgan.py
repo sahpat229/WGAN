@@ -117,19 +117,21 @@ class WGAN():
 	def optim_init(self):
 		update_ops = tf.get_collection("gen_upd_coll")
 		updates = tf.group(*update_ops)
+		gen_variables = tf.get_collection("gen_var_coll")
 		self.gen_optim = tf.group(updates,
 			tf.train.AdamOptimizer(
 				learning_rate=self.learning_rate_g,
 				beta1=0.5,
 				beta2=0.9
-				).minimize(self.generator_loss)
+				).minimize(self.generator_loss, var_list=gen_variables)
 			)
 
+		disc_variables = tf.get_collection("disc_var_coll")
 		self.disc_optim = tf.train.AdamOptimizer(
 			learning_rate=self.learning_rate_c,
 			beta1=0.5,
 			beta2=0.9
-			).minimize(self.disc_loss)
+			).minimize(self.disc_loss, var_list=disc_variables)
 	
 		self.sess.run(tf.global_variables_initializer())
 
