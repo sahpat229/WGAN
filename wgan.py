@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
 from data import Fonts, Latent
 from discriminator import Discriminator
@@ -118,6 +117,7 @@ class WGAN():
 		update_ops = tf.get_collection("gen_upd_coll")
 		updates = tf.group(*update_ops)
 		gen_variables = tf.get_collection("gen_var_coll")
+		disc_variables = tf.get_collection("disc_var_coll")
 		self.gen_optim = tf.group(updates,
 			tf.train.AdamOptimizer(
 				learning_rate=self.learning_rate_g,
@@ -152,7 +152,7 @@ class WGAN():
 
 	def gen_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		gen_loss, _, summary = self.sess.run(
-			[self.gen_loss, self.gen_optim, self.gen_loss_sum],
+			[self.generator_loss, self.gen_optim, self.gen_loss_sum],
 			feed_dict = {
 					self.x: x,
 					self.xlabels: xlabels,
@@ -181,15 +181,15 @@ class WGAN():
 
 
 sess = tf.Session()
-path = '/media/sahil/NewVolume/College/fonts.hdf5'
+path = '../../fonts.hdf5'
 latent_dim = 100
 num_classes = 62
 batch_size =16
 learning_rate_c = 1e-4
 learning_rate_g = 1e-4
 lambdah = 10
-num_critic = 5
-iterations = 10
+num_critic = 2
+iterations = 10000
 
 wgan = WGAN(sess, path, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)

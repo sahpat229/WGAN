@@ -1,6 +1,5 @@
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 
 np.random.seed(1234)
 
@@ -36,9 +35,9 @@ class Fonts():
 		images = np.array([self.fonts[fonts[i]][labels[i]] for i in range(self.batch_size)])
 		return np.expand_dims(images, axis=3), batch_labels
 
-	def test_load(self):
-		plt.imshow(self.fonts[0][0])
-		plt.show()
+	# def test_load(self):
+	#	plt.imshow(self.fonts[0][0])
+	#	plt.show()
 
 class Latent():
 	"""
