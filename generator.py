@@ -20,12 +20,6 @@ class Generator():
 				updates_collections=upd_coll
 			)
 
-		# result = tf.layers.batch_normalization(
-		# 		input_map,
-		# 		training=is_training,
-		# 		name=name+'_batch'
-		# 	)
-
 		result = tf.image.resize_images(result,
 				[new_size, new_size],
 				method=tf.image.ResizeMethod.NEAREST_NEIGHBOR
@@ -41,17 +35,7 @@ class Generator():
 				weights_initializer=tf.contrib.layers.variance_scaling_initializer(),
 				variables_collections=var_coll
 			)
-
-		# result = tf.layers.conv2d(
-		# 		result,
-		# 		filters,
-		# 		kernel_size=[k_size, k_size],
-		# 		strides=(stride, stride),
-		# 		padding='same',
-		# 		activation=activation,
-		# 		kernel_initializer=tf.contrib.layers.variance_scaling_initializer(),
-		# 		name=name+'_conv'
-		# 	)
+		
 		return result
 
 	def generator(z, is_training, var_coll, upd_coll):
