@@ -1,7 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from data import Fonts, Latent
+from data import Data
 from discriminator import Discriminator
 from generator import Generator
 from time import gmtime, strftime
@@ -16,7 +15,7 @@ class WGAN():
 	Improved Wasserstein GAN Model
 	"""
 
-	def __init__(self, sess, path, latent_dim, num_classes, batch_size, learning_rate_c,
+	def __init__(self, version, sess, path, latent_dim, num_classes, batch_size, learning_rate_c,
 		learning_rate_g, lambdah, num_critic, iterations):
 		"""
 		- sess : tf.Session
@@ -31,9 +30,9 @@ class WGAN():
 		- num_critic: number of iterations critic should run over generator
 		- iterations: number of overall iterations
 		"""
+		self.version = version
 		self.sess = sess
-		self.real_data = Fonts(path, batch_size)
-		self.latent = Latent(self.real_data.num_chars, latent_dim, batch_size)
+		self.data = Data(path, latent_dim, batch_size)
 		self.num_classes = num_classes
 		self.batch_size = batch_size
 		self.learning_rate_c = learning_rate_c
@@ -54,33 +53,18 @@ class WGAN():
 			epsilon_return[index, :] = epsilon[index]
 		return epsilon_return
 
-	def build_model(self):
-		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
-		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
-		self.z = tf.placeholder(tf.float32, 
-			shape=[self.batch_size, self.latent.output_size])
-		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
-		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
-		self.is_training = tf.placeholder(tf.bool, shape=[])
-
-		gen_var_coll = ["gen_var_coll"]
-		gen_upd_coll = ["gen_upd_coll"]
-
-		disc_var_coll = ["disc_var_coll"]
-
+	def build_v1(self):
 		with tf.variable_scope("generator") as scope:
-			generator_output = Generator.generator(self.z, self.is_training, gen_var_coll, gen_upd_coll)
+			generator_output = Generator.generator(self.z, self.is_training, 
+				self.gen_var_coll, self.gen_upd_coll)
 		
 		with tf.variable_scope("discriminator") as scope:
-			disc_output_x = Discriminator.discriminator(self.x, self.batch_size, 
-				self.num_classes, disc_var_coll)
+			disc_output_x = Discriminator.discriminator_v1(self.x, self.batch_size, self.num_classes, self.disc_var_coll)
 			scope.reuse_variables()
-			disc_output_gz = Discriminator.discriminator(generator_output, self.batch_size, 
-				self.num_classes, disc_var_coll)
+			disc_output_gz = Discriminator.discriminator_v1(generator_output, self.batch_size, self.num_classes, disc_var_coll)
 			interpolates = tf.multiply(self.epsilon, self.x) + \
 				tf.multiply(1-self.epsilon, generator_output)
-			disc_interpolates = Discriminator.discriminator(interpolates, self.batch_size, 
-				self.num_classes, disc_var_coll)
+			disc_interpolates = Discriminator.discriminator_v1(interpolates, self.batch_size, self.num_classes, disc_var_coll)
 
 		# discriminator(generator_output_inner) will be of size:
 		# 	[batch_size, num_classes+1]
@@ -108,6 +92,49 @@ class WGAN():
 			total_grad_penalty += grad_penalty
 		self.disc_loss += self.lambdah*total_grad_penalty
 
+	def build_v2(self):
+		with tf.variable_scope("generator") as scope:
+			generator_output = Generator.generator(self.z, self.is_training, 
+				self.gen_var_coll, self.gen_upd_coll)
+
+		with tf.variable_scope("discriminator") as scope:
+			disc_output_x = Discriminator.discriminator_v2(self.x, self.xlabels, 
+				self.batch_size, self.disc_var_coll, 100)
+			scope.reuse_variables()
+			disc_output_gz = Discriminator.discriminator_v2(generator_output, self.zlabels,
+				self.batch_size, self.disc_var_coll, 100)
+			interpolates = tf.multiply(self.epsilon, self.x) + tf.multiply(1-self.epsilon, generator_output)
+			disc_interpolates = Discriminator.discriminator_v2(interpolates, self.xlabels, self.batch_size,
+				self.disc_var_coll, 100)
+
+		self.generator_loss = tf.reduce_mean(disc_output_gz)
+		self.disc_loss = tf.reduce_mean(disc_output_x) - self.generator_loss
+
+		gradients = tf.gradients(disc_interpolates, [intterpolates])[0]
+		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+		gradient_penalty = tf.reduce_mean((slopes-1)**2)
+		self.disc_loss += self.lambdah*gradient_penalty
+
+	def build_model(self):
+		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
+		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
+		self.z = tf.placeholder(tf.float32, 
+			shape=[self.batch_size, self.latent.output_size])
+		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
+		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
+		self.is_training = tf.placeholder(tf.bool, shape=[])
+
+		self.gen_var_coll = ["gen_var_coll"]
+		self.gen_upd_coll = ["gen_upd_coll"]
+		self.disc_var_coll = ["disc_var_coll"]
+
+		if self.version == "v1":
+			self.build_v1()
+		elif self.version == "v2":
+			self.build_v2()
+		else:
+			raise ValueError("Must use either 'v1' or 'v2' for version argument in WGAN")
+
 		self.disc_loss_sum = tf.summary.scalar('Discriminator Loss', self.disc_loss)
 		self.gen_loss_sum = tf.summary.scalar('Generator Loss', self.generator_loss)
 
@@ -117,19 +144,22 @@ class WGAN():
 	def optim_init(self):
 		update_ops = tf.get_collection("gen_upd_coll")
 		updates = tf.group(*update_ops)
+		gen_variables = tf.get_collection("gen_var_coll")
+		disc_variables = tf.get_collection("disc_var_coll")
 		self.gen_optim = tf.group(updates,
 			tf.train.AdamOptimizer(
 				learning_rate=self.learning_rate_g,
 				beta1=0.5,
 				beta2=0.9
-				).minimize(self.generator_loss)
+				).minimize(self.generator_loss, var_list=gen_variables)
 			)
 
+		disc_variables = tf.get_collection("disc_var_coll")
 		self.disc_optim = tf.train.AdamOptimizer(
 			learning_rate=self.learning_rate_c,
 			beta1=0.5,
 			beta2=0.9
-			).minimize(self.disc_loss)
+			).minimize(self.disc_loss, var_list=disc_variables)
 	
 		self.sess.run(tf.global_variables_initializer())
 
@@ -150,7 +180,7 @@ class WGAN():
 
 	def gen_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		gen_loss, _, summary = self.sess.run(
-			[self.gen_loss, self.gen_optim, self.gen_loss_sum],
+			[self.generator_loss, self.gen_optim, self.gen_loss_sum],
 			feed_dict = {
 					self.x: x,
 					self.xlabels: xlabels,
@@ -177,19 +207,19 @@ class WGAN():
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
 
-
+version = "v2"
 sess = tf.Session()
-path = '/media/sahil/NewVolume/College/fonts.hdf5'
+path = '../fonts.hdf5'
 latent_dim = 100
 num_classes = 62
 batch_size =16
 learning_rate_c = 1e-4
 learning_rate_g = 1e-4
 lambdah = 10
-num_critic = 5
-iterations = 10
+num_critic = 2
+iterations = 10000
 
-wgan = WGAN(sess, path, latent_dim, num_classes, batch_size, 
+wgan = WGAN(version, sess, path, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
 wgan.optim_init()
 wgan.train()
