@@ -110,7 +110,7 @@ class WGAN():
 		self.generator_loss = tf.reduce_mean(disc_output_gz)
 		self.disc_loss = tf.reduce_mean(disc_output_x) - self.generator_loss
 
-		gradients = tf.gradients(disc_interpolates, [intterpolates])[0]
+		gradients = tf.gradients(disc_interpolates, [interpolates])[0]
 		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
 		gradient_penalty = tf.reduce_mean((slopes-1)**2)
 		self.disc_loss += self.lambdah*gradient_penalty
@@ -119,7 +119,7 @@ class WGAN():
 		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.z = tf.placeholder(tf.float32, 
-			shape=[self.batch_size, self.latent.output_size])
+			shape=[self.batch_size, self.data.latent_output_size])
 		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.is_training = tf.placeholder(tf.bool, shape=[])
@@ -196,19 +196,20 @@ class WGAN():
 	def train(self):
 		for iteration in range(self.iterations):
 			for disc_iter in range(self.num_critic):
-				x, xlabels = self.real_data.serve_real()
-				z, zlabels = self.latent.serve_latent()
+				x, xlabels = self.data.serve_real()
+				z, zlabels = self.data.serve_latent()
 				epsilon = self.serve_epsilon()
 				self.disc_train_iter(iteration*self.num_critic + disc_iter,
 					x, xlabels, z, zlabels, epsilon)
-			x, xlabels = self.real_data.serve_real()
-			z, zlabels = self.latent.serve_latent()
+			x, xlabels = self.data.serve_real()
+			z, zlabels = self.data.serve_latent()
 			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
 
 version = "v2"
 sess = tf.Session()
+path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
 path = '../fonts.hdf5'
 latent_dim = 100
 num_classes = 62
@@ -219,7 +220,7 @@ lambdah = 10
 num_critic = 2
 iterations = 10000
 
-wgan = WGAN(version, sess, path, latent_dim, num_classes, batch_size, 
+wgan = WGAN(version, sess, path_sahil_comp, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
 wgan.optim_init()
 wgan.train()

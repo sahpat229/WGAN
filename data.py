@@ -10,9 +10,9 @@ class Data():
 	"""
 
 	def __init__(self, path, latent_dim, batch_size):
-		self.load_font_file(path)
 		self.batch_size = batch_size
 		self.latent_dim = latent_dim
+		self.load_font_file(path)
 
 	def load_font_file(self, path):
 		"""
@@ -23,6 +23,7 @@ class Data():
 		self.fonts = f['fonts']
 		fonts_shape = f['fonts'].shape
 		self.num_fonts, self.num_classes = fonts_shape[0], fonts_shape[1]
+		self.latent_output_size = self.num_classes + self.latent_dim
 
 	def randomize_labels(self):
 		self.font_labels = np.random.randint(low=0, high=self.num_fonts, size=self.batch_size)
@@ -36,7 +37,7 @@ class Data():
 		self.randomize_labels()
 		batch_labels = np.zeros((self.batch_size, self.num_classes+1))
 		batch_labels[np.arange(self.batch_size), self.char_labels] = 1
-		images = np.array([self.font_labels[self.font_labels[i]][labels[i]] for i in range(self.batch_size)])
+		images = np.array([self.fonts[self.font_labels[i]][self.char_labels[i]] for i in range(self.batch_size)])
 		return np.expand_dims(images, axis=3), batch_labels
 
 	def serve_latent(self):

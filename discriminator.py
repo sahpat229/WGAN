@@ -8,7 +8,7 @@ np.random.seed(1234)
 
 class Discriminator():
 
-	def dis_conv(input_map, input_labels, filters, k_size, stride, activation, var_coll):
+	def dis_conv(input_map, filters, k_size, stride, activation, var_coll):
 		result = slim.layers.convolution(
 				input_map,
 				filters,
@@ -45,18 +45,18 @@ class Discriminator():
 		"""
 
 		result = Discriminator.dis_conv(x, 128, 2, 2, ops.lrelu, var_coll)
-		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_col)
+		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_coll)
 		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu, var_coll)
 		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu, var_coll)
 		result = tf.reshape(result, [batch_size, -1])
 		result = slim.fully_connected(result, fc_space_size, activation_fn=ops.lrelu,
-			variables_collection=var_coll)
+			variables_collections=var_coll)
 		labels = slim.fully_connected(labels, fc_space_size, activation_fn=ops.lrelu,
-			variables_collection=var_coll)
+			variables_collections=var_coll)
 		result = tf.concat([result, labels], 1)
 		result = slim.layers.fully_connected(result, 2*fc_space_size,
-			activation_fn=ops.lrelu, variables_collection=var_coll)
+			activation_fn=ops.lrelu, variables_collections=var_coll)
 		result = slim.layers.fully_connected(result, 1, activation_fn=ops.lrelu,
-			variables_collection=var_coll)
+			variables_collections=var_coll)
 		return result
 
