@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from data import Data
 from discriminator import Discriminator
 from generator import Generator
@@ -41,6 +42,7 @@ class WGAN():
 		self.num_critic = num_critic
 		self.iterations = iterations
 		self.time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+		self.data.test()
 		self.build_model()
 
 	def serve_epsilon(self):
@@ -55,18 +57,18 @@ class WGAN():
 
 	def build_v1(self):
 		with tf.variable_scope("generator") as scope:
-			generator_output = Generator.generator(self.z, self.is_training, 
+			self.generator_output = Generator.generator(self.z, self.is_training, 
 				self.gen_var_coll, self.gen_upd_coll)
 		
 		with tf.variable_scope("discriminator") as scope:
 			disc_output_x = Discriminator.discriminator_v1(self.x, self.batch_size, self.num_classes, self.disc_var_coll)
 			scope.reuse_variables()
-			disc_output_gz = Discriminator.discriminator_v1(generator_output, self.batch_size, self.num_classes, disc_var_coll)
+			disc_output_gz = Discriminator.discriminator_v1(self.generator_output, self.batch_size, self.num_classes, disc_var_coll)
 			interpolates = tf.multiply(self.epsilon, self.x) + \
-				tf.multiply(1-self.epsilon, generator_output)
+				tf.multiply(1-self.epsilon, self.generator_output)
 			disc_interpolates = Discriminator.discriminator_v1(interpolates, self.batch_size, self.num_classes, disc_var_coll)
 
-		# discriminator(generator_output_inner) will be of size:
+		# discriminator(self.generator_output_inner) will be of size:
 		# 	[batch_size, num_classes+1]
 		# labels will be of shape:
 		#	[batch_size, num_classes+1]
@@ -94,16 +96,16 @@ class WGAN():
 
 	def build_v2(self):
 		with tf.variable_scope("generator") as scope:
-			generator_output = Generator.generator(self.z, self.is_training, 
+			self.generator_output = Generator.generator(self.z, self.is_training, 
 				self.gen_var_coll, self.gen_upd_coll)
 
 		with tf.variable_scope("discriminator") as scope:
 			disc_output_x = Discriminator.discriminator_v2(self.x, self.xlabels, 
 				self.batch_size, self.disc_var_coll, 100)
 			scope.reuse_variables()
-			disc_output_gz = Discriminator.discriminator_v2(generator_output, self.zlabels,
+			disc_output_gz = Discriminator.discriminator_v2(self.generator_output, self.zlabels,
 				self.batch_size, self.disc_var_coll, 100)
-			interpolates = tf.multiply(self.epsilon, self.x) + tf.multiply(1-self.epsilon, generator_output)
+			interpolates = tf.multiply(self.epsilon, self.x) + tf.multiply(1-self.epsilon, self.generator_output)
 			disc_interpolates = Discriminator.discriminator_v2(interpolates, self.xlabels, self.batch_size,
 				self.disc_var_coll, 100)
 
@@ -154,7 +156,6 @@ class WGAN():
 				).minimize(self.generator_loss, var_list=gen_variables)
 			)
 
-		disc_variables = tf.get_collection("disc_var_coll")
 		self.disc_optim = tf.train.AdamOptimizer(
 			learning_rate=self.learning_rate_c,
 			beta1=0.5,
@@ -167,12 +168,12 @@ class WGAN():
 		disc_loss, _, summary = self.sess.run(
 			[self.disc_loss, self.disc_optim, self.disc_loss_sum],
 			feed_dict = {
-					self.x: x,
-					self.xlabels: xlabels,
-					self.z: z,
-					self.zlabels: zlabels,
-					self.epsilon: epsilon,
-					self.is_training: True
+				self.x: x,
+				self.xlabels: xlabels,
+				self.z: z,
+				self.zlabels: zlabels,
+				self.epsilon: epsilon,
+				self.is_training: True
 				}
 			)
 		print("DISC LOSS: ", disc_loss)
@@ -182,16 +183,33 @@ class WGAN():
 		gen_loss, _, summary = self.sess.run(
 			[self.generator_loss, self.gen_optim, self.gen_loss_sum],
 			feed_dict = {
-					self.x: x,
-					self.xlabels: xlabels,
-					self.z: z,
-					self.zlabels: zlabels,
-					self.epsilon: epsilon,
-					self.is_training: True
+				self.x: x,
+				self.xlabels: xlabels,
+				self.z: z,
+				self.zlabels: zlabels,
+				self.epsilon: epsilon,
+				self.is_training: True
 				}
 			)
 		print("GEN LOSS: ", gen_loss)
 		self.gen_writer.add_summary(summary, iteration)
+
+	def probe(self):
+		x, xlabels = self.data.serve_real()
+		z, zlabels = self.data.serve_latent()
+		epsilon = self.serve_epsilon()
+		images = self.sess.run(self.generator_output,
+			feed_dict = {
+				self.x: x,
+				self.xlabels: xlabels,
+				self.z: z,
+				self.zlabels: zlabels,
+				self.epsilon: epsilon,
+				self.is_training: False
+			});
+		print(images[0].shape)
+		plt.imshow(np.tile(images[0], (1, 1, 3)))
+		plt.show()
 
 	def train(self):
 		for iteration in range(self.iterations):
@@ -206,6 +224,8 @@ class WGAN():
 			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
+			if iteration % 10 == 0:
+				self.probe()
 
 version = "v2"
 sess = tf.Session()

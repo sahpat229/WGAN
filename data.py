@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import matplotlib.pyplot as plt
 
 np.random.seed(1234)
 
@@ -54,3 +55,12 @@ class Data():
 
 		labels = np.concatenate((one_hot, np.zeros((self.batch_size, 1))), axis=1)
 		return feed_vectors, labels
+
+	def test(self):
+		image = self.fonts[0][0]
+		image = np.reshape(image, (64, 64, -1))
+		image = np.tile(image, (1, 1, 3))
+		print(image.shape)
+
+		plt.imshow(image)
+		plt.show()

@@ -48,6 +48,7 @@ class Discriminator():
 		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_coll)
 		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu, var_coll)
 		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu, var_coll)
+		# flatten result
 		result = tf.reshape(result, [batch_size, -1])
 		result = slim.fully_connected(result, fc_space_size, activation_fn=ops.lrelu,
 			variables_collections=var_coll)
