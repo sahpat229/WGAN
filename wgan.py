@@ -55,6 +55,14 @@ class WGAN():
 		return epsilon_return
 
 	def build_v1(self):
+
+		"""
+		Version 1:
+		- D(x) has [num_classes+1] outputs
+		- D(x) uses one_hot class vector to compute its loss,
+		- G(z) uses one_hot class vector to generate, one_hot is the first [num_classes] elements of z
+		"""
+
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
@@ -96,6 +104,12 @@ class WGAN():
 		self.disc_loss += self.lambdah*total_grad_penalty
 
 	def build_v2(self):
+		"""
+		Version 2:
+		- D(x) has 1 output
+		- D(x) takes in the one_hot class vector as an input to compute that 1 output
+		- G(z) takes in the one_hot class vector as before in Version 1
+		"""
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
@@ -121,6 +135,9 @@ class WGAN():
 		self.disc_loss += self.lambdah*gradient_penalty
 
 	def build_v3(self):
+		"""
+		Normal Improved WGAN, with only real vs fake (no classes)
+		"""
 		self.z = tf.placeholder(tf.float32,
 			shape=[self.batch_size, self.data.latent_dim])
 		with tf.variable_scope("generator") as scope:
@@ -191,7 +208,7 @@ class WGAN():
 			).minimize(self.disc_loss, var_list=disc_variables)
 	
 		self.sess.run(tf.global_variables_initializer())
-
+ 
 	def disc_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		disc_loss, _, summary = self.sess.run(
 			[self.disc_loss, self.disc_optim, self.disc_loss_sum],
