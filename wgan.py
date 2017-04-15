@@ -41,7 +41,7 @@ class WGAN():
 		self.num_critic = num_critic
 		self.iterations = iterations
 		self.time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-		self.data.test()
+		#self.data.test()
 		self.build_model()
 
 	def serve_epsilon(self):
@@ -55,6 +55,14 @@ class WGAN():
 		return epsilon_return
 
 	def build_v1(self):
+
+		"""
+		Version 1:
+		- D(x) has [num_classes+1] outputs
+		- D(x) uses one_hot class vector to compute its loss,
+		- G(z) uses one_hot class vector to generate, one_hot is the first [num_classes] elements of z
+		"""
+
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
@@ -96,6 +104,12 @@ class WGAN():
 		self.disc_loss += self.lambdah*total_grad_penalty
 
 	def build_v2(self):
+		"""
+		Version 2:
+		- D(x) has 1 output
+		- D(x) takes in the one_hot class vector as an input to compute that 1 output
+		- G(z) takes in the one_hot class vector as before in Version 1
+		"""
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
@@ -121,6 +135,9 @@ class WGAN():
 		self.disc_loss += self.lambdah*gradient_penalty
 
 	def build_v3(self):
+		"""
+		Normal Improved WGAN, with only real vs fake (no classes)
+		"""
 		self.z = tf.placeholder(tf.float32,
 			shape=[self.batch_size, self.data.latent_dim])
 		with tf.variable_scope("generator") as scope:
@@ -191,7 +208,7 @@ class WGAN():
 			).minimize(self.disc_loss, var_list=disc_variables)
 	
 		self.sess.run(tf.global_variables_initializer())
-
+ 
 	def disc_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
 		disc_loss, _, summary = self.sess.run(
 			[self.disc_loss, self.disc_optim, self.disc_loss_sum],
@@ -253,8 +270,8 @@ class WGAN():
 					x, xlabels = self.data.serve_real()
 					z, zlabels = self.data.serve_latent_orig()
 				epsilon = self.serve_epsilon()
-				print("EPSILON [0]: ", epsilon[0])
-				print("EPSILON [1]: ", epsilon[1])
+				#print("EPSILON [0]: ", epsilon[0])
+				#print("EPSILON [1]: ", epsilon[1])
 				self.disc_train_iter(iteration*self.num_critic + disc_iter,
 					x, xlabels, z, zlabels, epsilon)
 
@@ -267,12 +284,13 @@ class WGAN():
 			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
-			if iteration % 10 == 0:
+			if iteration % 100 == 0:
 				self.probe()
 
 version = "v3"
 sess = tf.Session()
 path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
+path_deep = '../../fonts.hdf5'
 path = '../fonts.hdf5'
 latent_dim = 25
 num_classes = 62
@@ -283,7 +301,7 @@ lambdah = 10
 num_critic = 5
 iterations = 10000
 
-wgan = WGAN(version, sess, path_sahil_comp, latent_dim, num_classes, batch_size, 
+wgan = WGAN(version, sess, path_deep, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
 wgan.optim_init()
 wgan.train()
