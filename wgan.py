@@ -291,6 +291,7 @@ version = "v3"
 sess = tf.Session()
 path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
 path_deep = '../../fonts.hdf5'
+path = '../fonts.hdf5'
 latent_dim = 25
 num_classes = 62
 batch_size =16
