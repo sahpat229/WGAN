@@ -137,8 +137,8 @@ class WGAN():
 			disc_interpolates = Discriminator.discriminator_v3(interpolates, self.batch_size,
 				self.disc_var_coll)
 
-		self.generator_loss = tf.reduce_mean(disc_output_gz)
-		self.disc_loss = tf.reduce_mean(disc_output_x) - self.generator_loss
+		self.generator_loss = -tf.reduce_mean(disc_output_gz)
+		self.disc_loss = -tf.reduce_mean(disc_output_x) + tf.reduce_mean(disc_output_gz)
 
 		gradients = tf.gradients(disc_interpolates, [interpolates])[0]
 		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
