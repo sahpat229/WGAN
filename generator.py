@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import tensorflow as tf
+import numpy as np
 
 slim =  tf.contrib.slim
 
@@ -23,20 +24,6 @@ class Generator():
 				[new_size, new_size],
 				method=tf.image.ResizeMethod.NEAREST_NEIGHBOR
 			)
-
-		# result = slim.layers.convolution2d_transpose(
-		# 		input_map,
-		# 		filters,
-		# 		kernel_size=[k_size, k_size],
-		# 		stride=stride,
-		# 		padding='VALID',
-		# 		activation_fn=activation,
-		# 		weights_initializer=tf.contrib.layers.variance_scaling_initializer(),
-		# 		normalizer_fn=slim.layers.batch_norm,
-		# 		normalizer_params={'is_training':is_training, 'scale':True, 'updates_collections':upd_coll,
-		# 			'variables_collections':var_coll},
-		# 		variables_collections=var_coll
-		# 	)
 
 		result = slim.layers.convolution(
 				result,
@@ -61,11 +48,7 @@ class Generator():
 		result = slim.fully_connected(z, 4*4*1024, variables_collections=var_coll)
 		result = tf.reshape(result, [-1, 4, 4, 1024])
 		result = Generator.gen_conv(result, 8, 512, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
-		print("RESULT shape: ", result.shape)
-		result = Generator.gen_conv(result, 16, 256, 5, 2, tf.nn.relu, is_training, var_coll, upd_coll)
-		print("RESULT shape: ", result.shape)
-		result = Generator.gen_conv(result, 32, 128, 5, 2, tf.nn.relu, is_training, var_coll, upd_coll)
-		print("RESULT shape: ", result.shape)
-		result = Generator.gen_conv(result, 64, 1, 5, 2, tf.nn.tanh, is_training, var_coll, upd_coll)
-		print("RESULT shape: ", result.shape)
+		result = Generator.gen_conv(result, 16, 256, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
+		result = Generator.gen_conv(result, 32, 128, 5, 1, tf.nn.relu, is_training, var_coll, upd_coll)
+		result = Generator.gen_conv(result, 64, 1, 5, 1, tf.nn.tanh, is_training, var_coll, upd_coll)
 		return result

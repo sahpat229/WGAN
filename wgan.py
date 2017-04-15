@@ -301,7 +301,7 @@ lambdah = 10
 num_critic = 5
 iterations = 10000
 
-wgan = WGAN(version, sess, path_deep, latent_dim, num_classes, batch_size, 
+wgan = WGAN(version, sess, path_sahil_comp, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
 wgan.optim_init()
 wgan.train()
