@@ -42,7 +42,7 @@ class WGAN():
 		self.num_critic = num_critic
 		self.iterations = iterations
 		self.time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-		self.data.test()
+		#self.data.test()
 		self.build_model()
 
 	def serve_epsilon(self):
@@ -224,13 +224,13 @@ class WGAN():
 			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
-			if iteration % 10 == 0:
+			if iteration % 100 == 0:
 				self.probe()
 
 version = "v2"
 sess = tf.Session()
 path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
-path = '../fonts.hdf5'
+path_deep = '../../fonts.hdf5'
 latent_dim = 100
 num_classes = 62
 batch_size =16
@@ -240,7 +240,7 @@ lambdah = 10
 num_critic = 2
 iterations = 10000
 
-wgan = WGAN(version, sess, path_sahil_comp, latent_dim, num_classes, batch_size, 
+wgan = WGAN(version, sess, path_deep, latent_dim, num_classes, batch_size, 
 	learning_rate_c, learning_rate_g, lambdah, num_critic, iterations)
 wgan.optim_init()
 wgan.train()
