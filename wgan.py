@@ -270,8 +270,8 @@ class WGAN():
 					x, xlabels = self.data.serve_real()
 					z, zlabels = self.data.serve_latent_orig()
 				epsilon = self.serve_epsilon()
-				print("EPSILON [0]: ", epsilon[0])
-				print("EPSILON [1]: ", epsilon[1])
+				#print("EPSILON [0]: ", epsilon[0])
+				#print("EPSILON [1]: ", epsilon[1])
 				self.disc_train_iter(iteration*self.num_critic + disc_iter,
 					x, xlabels, z, zlabels, epsilon)
 
@@ -291,7 +291,7 @@ version = "v3"
 sess = tf.Session()
 path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
 path_deep = '../../fonts.hdf5'
-latent_dim = 100
+latent_dim = 25
 num_classes = 62
 batch_size =16
 learning_rate_c = 1e-4
