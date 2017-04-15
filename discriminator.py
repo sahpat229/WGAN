@@ -19,7 +19,6 @@ class Discriminator():
 				weights_initializer=tf.contrib.layers.variance_scaling_initializer(),
 				variables_collections=var_coll
 			)
-
 		return result
 
 	def discriminator_v1(x, batch_size, num_chars, var_coll):
@@ -61,3 +60,18 @@ class Discriminator():
 			variables_collections=var_coll)
 		return result
 
+	def discriminator_v3(x, batch_size, var_coll):
+		"""
+		- Compute D(x)
+		"""
+		result = Discriminator.dis_conv(x, 128, 2, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu, var_coll)
+		# flatten result
+		result = tf.reshape(result, [batch_size, -1])
+		result = slim.layers.fully_connected(result, 200, activation_fn=ops.lrelu,
+			variables_collections=var_coll)
+		result = slim.layers.fully_connected(result, 1, activation_fn=ops.lrelu,
+			variables_collections=var_coll)
+		return result

@@ -56,6 +56,14 @@ class Data():
 		labels = np.concatenate((one_hot, np.zeros((self.batch_size, 1))), axis=1)
 		return feed_vectors, labels
 
+	def serve_latent_orig(self):
+		"""
+		"""
+		latent = np.random.uniform(size=(self.batch_size, self.latent_dim))
+		one_hot = np.zeros((self.batch_size, self.num_classes))
+		labels = np.concatenate((one_hot, np.zeros((self.batch_size, 1))), axis=1)
+		return latent, labels
+
 	def test(self):
 		image = self.fonts[0][0]
 		image = np.reshape(image, (64, 64, -1))

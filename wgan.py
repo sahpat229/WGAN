@@ -10,7 +10,6 @@ np.random.seed(1234)
 
 ## TODO: FIX GRADIENTS
 
-
 class WGAN():
 	"""
 	Improved Wasserstein GAN Model
@@ -56,6 +55,8 @@ class WGAN():
 		return epsilon_return
 
 	def build_v1(self):
+		self.z = tf.placeholder(tf.float32, 
+			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
 			self.generator_output = Generator.generator(self.z, self.is_training, 
 				self.gen_var_coll, self.gen_upd_coll)
@@ -95,6 +96,8 @@ class WGAN():
 		self.disc_loss += self.lambdah*total_grad_penalty
 
 	def build_v2(self):
+		self.z = tf.placeholder(tf.float32, 
+			shape=[self.batch_size, self.data.latent_output_size])
 		with tf.variable_scope("generator") as scope:
 			self.generator_output = Generator.generator(self.z, self.is_training, 
 				self.gen_var_coll, self.gen_upd_coll)
@@ -117,11 +120,34 @@ class WGAN():
 		gradient_penalty = tf.reduce_mean((slopes-1)**2)
 		self.disc_loss += self.lambdah*gradient_penalty
 
+	def build_v3(self):
+		self.z = tf.placeholder(tf.float32,
+			shape=[self.batch_size, self.data.latent_dim])
+		with tf.variable_scope("generator") as scope:
+			self.generator_output = Generator.generator(self.z, self.is_training,
+				self.gen_var_coll, self.gen_upd_coll)
+
+		with tf.variable_scope("discriminator") as scope:
+			disc_output_x = Discriminator.discriminator_v3(self.x, self.batch_size,
+				self.disc_var_coll)
+			scope.reuse_variables()
+			disc_output_gz = Discriminator.discriminator_v3(self.generator_output, self.batch_size,
+				self.disc_var_coll)
+			interpolates = tf.multiply(self.epsilon, self.x) + tf.multiply(1-self.epsilon, self.generator_output)
+			disc_interpolates = Discriminator.discriminator_v3(interpolates, self.batch_size,
+				self.disc_var_coll)
+
+		self.generator_loss = tf.reduce_mean(disc_output_gz)
+		self.disc_loss = tf.reduce_mean(disc_output_x) - self.generator_loss
+
+		gradients = tf.gradients(disc_interpolates, [interpolates])[0]
+		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+		gradient_penalty = tf.reduce_mean((slopes-1)**2)
+		self.disc_loss += self.lambdah*gradient_penalty
+
 	def build_model(self):
 		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
-		self.z = tf.placeholder(tf.float32, 
-			shape=[self.batch_size, self.data.latent_output_size])
 		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 64, 64, 1])
 		self.is_training = tf.placeholder(tf.bool, shape=[])
@@ -134,6 +160,8 @@ class WGAN():
 			self.build_v1()
 		elif self.version == "v2":
 			self.build_v2()
+		elif self.version == "v3":
+			self.build_v3()
 		else:
 			raise ValueError("Must use either 'v1' or 'v2' for version argument in WGAN")
 
@@ -194,9 +222,13 @@ class WGAN():
 		print("GEN LOSS: ", gen_loss)
 		self.gen_writer.add_summary(summary, iteration)
 
-	def probe(self):
-		x, xlabels = self.data.serve_real()
-		z, zlabels = self.data.serve_latent()
+	def probe(self):	
+		if self.version == "v2" or self.version == "v1":
+			x, xlabels = self.data.serve_real()
+			z, zlabels = self.data.serve_latent()
+		else:
+			x, xlabels = self.data.serve_real()
+			z, zlabels = self.data.serve_latent_orig()
 		epsilon = self.serve_epsilon()
 		images = self.sess.run(self.generator_output,
 			feed_dict = {
@@ -214,20 +246,29 @@ class WGAN():
 	def train(self):
 		for iteration in range(self.iterations):
 			for disc_iter in range(self.num_critic):
-				x, xlabels = self.data.serve_real()
-				z, zlabels = self.data.serve_latent()
+				if self.version == "v2" or self.version == "v1":
+					x, xlabels = self.data.serve_real()
+					z, zlabels = self.data.serve_latent()
+				else:
+					x, xlabels = self.data.serve_real()
+					z, zlabels = self.data.serve_latent_orig()
 				epsilon = self.serve_epsilon()
 				self.disc_train_iter(iteration*self.num_critic + disc_iter,
 					x, xlabels, z, zlabels, epsilon)
-			x, xlabels = self.data.serve_real()
-			z, zlabels = self.data.serve_latent()
+
+			if self.version == "v2" or self.version == "v1":
+				x, xlabels = self.data.serve_real()
+				z, zlabels = self.data.serve_latent()
+			else:
+				x, xlabels = self.data.serve_real()
+				z, zlabels = self.data.serve_latent_orig()
 			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
 				x, xlabels, z, zlabels, epsilon)
 			if iteration % 100 == 0:
 				self.probe()
 
-version = "v2"
+version = "v3"
 sess = tf.Session()
 path_sahil_comp = '/media/sahil/NewVolume/College/fonts.hdf5'
 path_deep = '../../fonts.hdf5'
@@ -237,7 +278,7 @@ batch_size =16
 learning_rate_c = 1e-4
 learning_rate_g = 1e-4
 lambdah = 10
-num_critic = 2
+num_critic = 5
 iterations = 10000
 
 wgan = WGAN(version, sess, path_deep, latent_dim, num_classes, batch_size, 
