@@ -62,7 +62,7 @@ class Discriminator():
 
 	def discriminator_v3(x, batch_size, var_coll):
 		"""
-		- Compute D(x)
+		- Compute D(x), real vs fake
 		"""
 		result = Discriminator.dis_conv(x, 128, 2, 2, ops.lrelu, var_coll)
 		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_coll)
@@ -72,6 +72,6 @@ class Discriminator():
 		result = tf.reshape(result, [batch_size, -1])
 		result = slim.layers.fully_connected(result, 200, activation_fn=ops.lrelu,
 			variables_collections=var_coll)
-		result = slim.layers.fully_connected(result, 1, activation_fn=ops.lrelu,
+		result = slim.layers.fully_connected(result, 1, activation_fn=None,
 			variables_collections=var_coll)
 		return result
