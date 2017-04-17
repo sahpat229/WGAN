@@ -15,6 +15,7 @@ class MNIST_Data():
         self.train_labels_images = [item for item in self.read("training", path)]
         self.num_classes = len(self.train_labels_images[0][0])
         self.latent_output_size = self.latent_dim + self.num_classes
+        self.labels_size = self.num_classes + 1
         np.random.shuffle(self.train_labels_images)        
 
     def read(self, dataset, path = "."):

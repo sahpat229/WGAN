@@ -63,22 +63,23 @@ class MNIST_WGAN():
 		"""
 		self.z = tf.placeholder(tf.float32, 
 			shape=[self.batch_size, self.data.latent_output_size])
-		with tf.variable_scope("generator") as scope:
-			self.generator_output = MNIST_Generator.generator(self.z, self.is_training, 
-				self.gen_var_coll, self.gen_upd_coll)
+		#with tf.variable_scope("generator") as scope:
+		self.generator_output = MNIST_Generator.generator(self.z,
+			self.data.latent_output_size)
 
-		with tf.variable_scope("discriminator") as scope:
-			disc_output_x = MNIST_Discriminator.discriminator(self.x, self.xlabels, 
-				self.batch_size, self.disc_var_coll, 50)
-			scope.reuse_variables()
-			disc_output_gz = MNIST_Discriminator.discriminator(self.generator_output, self.zlabels,
-				self.batch_size, self.disc_var_coll, 50)
-			interpolates = tf.multiply(self.epsilon, self.x) + tf.multiply(1-self.epsilon, self.generator_output)
-			disc_interpolates = MNIST_Discriminator.discriminator(interpolates, self.xlabels, self.batch_size,
-				self.disc_var_coll, 50)
+		#with tf.variable_scope("discriminator") as scope:
+		disc_output_x = MNIST_Discriminator.discriminator(self.x, self.xlabels, 
+			self.data.labels_size, 50)
+		#scope.reuse_variables()
+		disc_output_gz = MNIST_Discriminator.discriminator(self.generator_output, self.zlabels,
+			self.data.labels_size, 50)
+		differences = disc_output_gz - disc_output_x
+		interpolates = disc_output_x + (self.epsilon*differences)
+		disc_interpolates = MNIST_Discriminator.discriminator(interpolates, self.xlabels,
+			self.data.labels_size, 50) 
 
-		self.generator_loss = tf.reduce_mean(disc_output_gz)
-		self.disc_loss = tf.reduce_mean(disc_output_x) - self.generator_loss
+		self.generator_loss = -tf.reduce_mean(disc_output_gz)
+		self.disc_loss = tf.reduce_mean(disc_output_gz) - tf.reduce_mean(disc_output_x)
 
 		gradients = tf.gradients(disc_interpolates, [interpolates])[0]
 		slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
@@ -89,7 +90,11 @@ class MNIST_WGAN():
 		self.x = tf.placeholder(tf.float32, shape=[self.batch_size, 28, 28, 1])
 		self.xlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
 		self.zlabels = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_classes+1])
-		self.epsilon = tf.placeholder(tf.float32, shape=[self.batch_size, 28, 28, 1])
+		self.epsilon = tf.random_uniform(
+				shape=[self.batch_size, 1],
+				minval=0.,
+				maxval=1.
+			)
 		self.is_training = tf.placeholder(tf.bool, shape=[])
 
 		self.gen_var_coll = ["gen_var_coll"]
@@ -132,7 +137,7 @@ class MNIST_WGAN():
 	
 		self.sess.run(tf.global_variables_initializer())
  
-	def disc_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
+	def disc_train_iter(self, iteration, x, xlabels, z, zlabels):
 		disc_loss, _, summary = self.sess.run(
 			[self.disc_loss, self.disc_optim, self.disc_loss_sum],
 			feed_dict = {
@@ -140,14 +145,13 @@ class MNIST_WGAN():
 				self.xlabels: xlabels,
 				self.z: z,
 				self.zlabels: zlabels,
-				self.epsilon: epsilon,
 				self.is_training: True
 				}
 			)
 		print("DISC LOSS: ", disc_loss)
 		self.disc_writer.add_summary(summary, iteration)
 
-	def gen_train_iter(self, iteration, x, xlabels, z, zlabels, epsilon):
+	def gen_train_iter(self, iteration, x, xlabels, z, zlabels):
 		gen_loss, _, summary = self.sess.run(
 			[self.generator_loss, self.gen_optim, self.gen_loss_sum],
 			feed_dict = {
@@ -155,7 +159,6 @@ class MNIST_WGAN():
 				self.xlabels: xlabels,
 				self.z: z,
 				self.zlabels: zlabels,
-				self.epsilon: epsilon,
 				self.is_training: True
 				}
 			)
@@ -165,14 +168,12 @@ class MNIST_WGAN():
 	def probe(self):	
 		x, xlabels = self.data.serve_real()
 		z, zlabels = self.data.serve_latent()
-		epsilon = self.serve_epsilon()
 		images = self.sess.run(self.generator_output,
 			feed_dict = {
 				self.x: x,
 				self.xlabels: xlabels,
 				self.z: z,
 				self.zlabels: zlabels,
-				self.epsilon: epsilon,
 				self.is_training: False
 			});
 		print(images[0].shape)
@@ -186,17 +187,15 @@ class MNIST_WGAN():
 			for disc_iter in range(self.num_critic):
 				x, xlabels = self.data.serve_real()
 				z, zlabels = self.data.serve_latent()
-				epsilon = self.serve_epsilon()
 				#print("EPSILON [0]: ", epsilon[0])
 				#print("EPSILON [1]: ", epsilon[1])
 				self.disc_train_iter(iteration*self.num_critic + disc_iter,
-					x, xlabels, z, zlabels, epsilon)
+					x, xlabels, z, zlabels)
 
 			x, xlabels = self.data.serve_real()
 			z, zlabels = self.data.serve_latent()
-			epsilon = self.serve_epsilon()
 			self.gen_train_iter(iteration*self.num_critic + disc_iter,
-				x, xlabels, z, zlabels, epsilon)
+				x, xlabels, z, zlabels)
 			if iteration % 100 == 0:
 				self.probe()
 
