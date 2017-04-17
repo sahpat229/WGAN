@@ -43,11 +43,12 @@ class Discriminator():
 		- return D(x) of shape [batch_size, 1]
 		"""
 
-		result = Discriminator.dis_conv(x, 128, 2, 2, ops.lrelu, var_coll)
-		result = Discriminator.dis_conv(result, 256, 2, 2, ops.lrelu, var_coll)
-		result = Discriminator.dis_conv(result, 512, 2, 2, ops.lrelu, var_coll)
-		result = Discriminator.dis_conv(result, 1024, 2, 1, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(x, 128, 5, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 256, 5, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 512, 5, 2, ops.lrelu, var_coll)
+		result = Discriminator.dis_conv(result, 1024, 5, 2, ops.lrelu, var_coll)
 		# flatten result
+		print("RESULT shape: ", result.shape)
 		result = tf.reshape(result, [batch_size, -1])
 		result = slim.fully_connected(result, fc_space_size, activation_fn=ops.lrelu,
 			variables_collections=var_coll)
@@ -56,7 +57,7 @@ class Discriminator():
 		result = tf.concat([result, labels], 1)
 		result = slim.layers.fully_connected(result, 2*fc_space_size,
 			activation_fn=ops.lrelu, variables_collections=var_coll)
-		result = slim.layers.fully_connected(result, 1, activation_fn=ops.lrelu,
+		result = slim.layers.fully_connected(result, 1, activation_fn=None,
 			variables_collections=var_coll)
 		return result
 

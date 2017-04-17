@@ -44,7 +44,7 @@ class Data():
 	def serve_latent(self):
 		"""
 		- Serve batch_size amount of latent variables to the generator
-		- Don't need to have fake as an item in one_hot vector
+		- Need to have fake as an item in one_hot vector
 		"""
 		row_picker = np.arange(self.batch_size)
 		one_hot = np.zeros((self.batch_size, self.num_classes))
